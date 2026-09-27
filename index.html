@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Dialogue</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./icon-192.png">
+<meta name="theme-color" content="#FFF7E8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dialogue">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+  :root{
+    --ink:#2E2A3A;
+    --paper:#FFF7E8;
+    --muted:#756E82;
+    --font-display:"Chalkboard SE","Marker Felt","Comic Sans MS",system-ui,sans-serif;
+    --font-ui:"Avenir Next","Avenir","Segoe UI",system-ui,sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{
+    margin:0;padding:0;
+    overscroll-behavior:none;
+    -webkit-user-select:none;user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-text-size-adjust:100%;
+  }
+
+  body{
+    background-color:var(--paper);
+    background-image:radial-gradient(rgba(46,42,58,.07) 1.5px,transparent 1.5px);
+    background-size:26px 26px;
+    font-family:var(--font-ui);
+    color:var(--ink);
+    touch-action:pan-y;
+  }
+
+  button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;}
+
+  .app{
+    display:flex;flex-direction:column;
+    height:100vh;height:100dvh;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;align-items:flex-start;justify-content:space-between;
+    gap:16px;
+    width:100%;max-width:1400px;margin:0 auto;
+    padding:18px 24px 8px;
+  }
+  h1{
+    margin:0;
+    font-family:var(--font-display);
+    font-size:clamp(24px,3.2vw,35px);font-weight:400;line-height:1.15;
+    letter-spacing:.5px;
+  }
+  .hint{margin:4px 0 0;color:var(--muted);font-size:clamp(16px,1.8vw,20px);}
+
+  .qr-btn{
+    flex:0 0 auto;width:58px;height:58px;
+    display:flex;align-items:center;justify-content:center;
+    background:#fff;
+    border:3px solid var(--ink);border-radius:16px;
+    box-shadow:0 4px 0 var(--ink);
+    transition:transform .1s ease;
+  }
+  .qr-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink);}
+  .qr-btn svg{width:30px;height:30px;}
+
+  /* ---------- scene: child | bubbles | child ---------- */
+  /* Everything in here is sized in em, so the one font size of .scene scales
+     the whole dialogue - the script picks the largest size that fits the screen. */
+  .scene{
+    flex:1 1 auto;min-height:0;
+    overflow-x:hidden;overflow-y:auto;
+    display:grid;
+    grid-template-columns:minmax(0,22%) minmax(0,1fr) minmax(0,22%);
+    grid-template-rows:1fr;
+    grid-template-areas:"left lines right";
+    column-gap:16px;
+    width:100%;max-width:1400px;margin:0 auto;
+    padding:.3em 24px .9em;
+    font-size:24px;
+  }
+  #personLeft{grid-area:left;}
+  #personRight{grid-area:right;}
+  .lines{grid-area:lines;}
+  /* auto margins centre things without pushing them off the top when the
+     dialogue is too long and has to scroll */
+  .person,.lines{margin-top:auto;margin-bottom:auto;}
+
+  .person{
+    margin-left:0;margin-right:0;
+    display:flex;flex-direction:column;align-items:center;
+    transition:opacity .25s ease,filter .25s ease;
+  }
+  .sprite{width:6.6em;height:10em;max-width:100%;}
+  .sprite svg,.sprite img{display:block;width:100%;height:100%;object-fit:contain;}
+  .person.talking .sprite{animation:hop .45s ease-in-out infinite alternate;}
+  @keyframes hop{
+    from{transform:translateY(0) rotate(-1.5deg);}
+    to{transform:translateY(-8px) rotate(1.5deg);}
+  }
+  .scene.busy .person:not(.talking){opacity:.55;filter:saturate(.6);}
+
+  /* mouth of the drawn stand-in children */
+  .mouth-open{opacity:0;}
+  .person.talking .mouth-shut{opacity:0;}
+  .person.talking .mouth-open{
+    opacity:1;
+    transform-box:fill-box;transform-origin:center;
+    animation:chatter .16s ease-in-out infinite alternate;
+  }
+  @keyframes chatter{
+    from{transform:scaleY(.3);}
+    to{transform:scaleY(1);}
+  }
+
+  /* ---------- speech bubbles ---------- */
+  .lines{
+    list-style:none;padding:0;
+    display:flex;flex-direction:column;gap:.6em;
+  }
+  .lines li{display:flex;}
+  .lines li.left{justify-content:flex-start;padding-left:.45em;}
+  .lines li.right{justify-content:flex-end;padding-right:.45em;}
+
+  .bubble{
+    position:relative;max-width:90%;
+    display:flex;align-items:center;gap:.5em;
+    padding:.45em .85em .45em .45em;
+    background:var(--c-light);
+    border:3px solid var(--c);border-radius:1em;
+    font-family:var(--font-display);
+    font-size:1em;line-height:1.3;text-align:left;
+    box-shadow:0 .18em 0 var(--c-dark);
+    transition:transform .15s ease,opacity .2s ease,box-shadow .15s ease;
+  }
+  .bubble::after{
+    content:"";position:absolute;bottom:.55em;
+    width:.7em;height:.7em;
+    background:var(--c-light);
+    border:3px solid var(--c);
+    transform:rotate(45deg);
+  }
+  .left .bubble::after{left:-.45em;border-top:0;border-right:0;}
+  .right .bubble::after{right:-.45em;border-bottom:0;border-left:0;}
+  .bubble:active{transform:scale(.97);}
+  .bubble .word{font-weight:700;}
+  .bubble.playing{transform:scale(1.04);box-shadow:0 .18em 0 var(--c-dark),0 0 0 .28em var(--c-glow);}
+  .scene.busy .bubble:not(.playing){opacity:.5;}
+  .bubble.silent,.scene.busy .bubble.silent{opacity:.38;}
+
+  .speaker{
+    flex:0 0 auto;width:1.7em;height:1.7em;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--c);border-radius:999px;
+  }
+  .speaker svg{width:.95em;height:.95em;}
+  .playing .wave{animation:wave .9s infinite;}
+  .playing .wave2{animation-delay:.3s;}
+  @keyframes wave{
+    0%,100%{opacity:.15;}
+    50%{opacity:1;}
+  }
+
+  .status{
+    position:fixed;left:14px;bottom:calc(6px + env(safe-area-inset-bottom));
+    font-size:10px;letter-spacing:.9px;
+    opacity:.45;
+    pointer-events:none;
+  }
+
+  /* ---------- share sheet ---------- */
+  .sheet{
+    position:fixed;inset:0;z-index:9000;
+    display:none;align-items:center;justify-content:center;
+    background:rgba(46,42,58,.55);
+    padding:20px;
+  }
+  .sheet.open{display:flex;}
+  .sheet-inner{
+    position:relative;
+    max-width:92vw;max-height:92vh;overflow:auto;
+    padding:26px 28px 20px;
+    background:#fff;color:var(--ink);text-align:center;
+    border:3px solid var(--ink);border-radius:28px;
+    box-shadow:0 8px 0 var(--ink);
+  }
+  .sheet h2{margin:0 0 12px;font-family:var(--font-display);font-size:27px;font-weight:400;}
+  .qr-card{display:flex;justify-content:center;padding:10px;background:#fff;}
+  .qr-card svg{display:block;width:min(380px,70vw,58vh);height:auto;}
+  .url-line{
+    margin:12px 0 0;
+    font-size:15px;color:var(--muted);word-break:break-all;
+    -webkit-user-select:text;user-select:text;
+  }
+  .close-btn{
+    position:absolute;top:10px;right:10px;
+    width:44px;height:44px;
+    background:#fff;
+    font-size:20px;font-weight:700;line-height:1;
+    border:3px solid var(--ink);border-radius:999px;
+  }
+  .empty-note{max-width:320px;margin:10px auto;font-size:17px;opacity:.7;}
+
+  /* upright: the two children stand at the top, the bubbles get the full width */
+  @media (orientation:portrait){
+    /* the empty first and last rows centre the children and bubbles as one
+       group, and shrink away when the dialogue needs all the room */
+    .scene{
+      grid-template-columns:1fr 1fr;
+      grid-template-rows:minmax(0,1fr) auto auto minmax(0,1fr);
+      grid-template-areas:". ." "left right" "lines lines" ". .";
+    }
+    .person{margin:0;}
+    .lines{margin:.5em 0 0;}
+    .sprite{width:4.3em;height:6.5em;}
+  }
+
+  @media (max-width:620px){
+    header{padding:14px 16px 6px;}
+    .scene{padding-left:16px;padding-right:16px;}
+    .bubble{max-width:94%;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none !important;transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <h1 id="title"></h1>
+      <p class="hint">&#128070; Tap a speech bubble and listen!</p>
+    </div>
+    <button class="qr-btn" id="shareBtn" aria-label="Show QR code">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2E2A3A" stroke-width="2" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"/>
+        <rect x="5.8" y="5.8" width="1.4" height="1.4" fill="#2E2A3A"/><rect x="16.8" y="5.8" width="1.4" height="1.4" fill="#2E2A3A"/>
+        <rect x="5.8" y="16.8" width="1.4" height="1.4" fill="#2E2A3A"/>
+        <path d="M14 14h3v3h-3zM21 14v1M14 21h1M18 21h3v-3" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </header>
+
+  <main class="scene" id="scene">
+    <figure class="person" id="personLeft"></figure>
+    <ol class="lines" id="lines"></ol>
+    <figure class="person" id="personRight"></figure>
+  </main>
+
+  <div class="status" id="status">v6</div>
+
+</div>
+
+<div class="sheet" id="shareSheet">
+  <div class="sheet-inner">
+    <button class="close-btn" id="shareClose" aria-label="Close">&#10005;</button>
+    <h2>Scan me!</h2>
+    <div class="qr-card" id="qrCard"></div>
+    <p class="url-line" id="urlLine"></p>
+  </div>
+</div>
+
+<audio id="player" preload="none" playsinline></audio>
+
+<script>
+/* Minimal QR encoder - byte mode, EC level L/M, versions 1-15. */
+
+var QR = (function(){
+  "use strict";
+
+  var TOTAL = [0,26,44,70,100,134,172,196,242,292,346,404,466,532,581,655];
+
+  // [ecPerBlock, g1Blocks, g1Data, g2Blocks, g2Data]
+  var BLOCKS = {
+    L: [null,[7,1,19,0,0],[10,1,34,0,0],[15,1,55,0,0],[20,1,80,0,0],[26,1,108,0,0],
+        [18,2,68,0,0],[20,2,78,0,0],[24,2,97,0,0],[30,2,116,0,0],[18,2,68,2,69],
+        [20,4,81,0,0],[24,2,92,2,93],[26,4,107,0,0],[30,3,115,1,116],[22,5,87,1,88]],
+    M: [null,[10,1,16,0,0],[16,1,28,0,0],[26,1,44,0,0],[18,2,32,0,0],[24,2,43,0,0],
+        [16,4,27,0,0],[18,4,31,0,0],[22,2,38,2,39],[22,3,36,2,37],[26,4,43,1,44],
+        [30,1,50,4,51],[22,6,36,2,37],[22,8,37,1,38],[24,4,40,5,41],[24,5,41,5,42]]
+  };
+
+  var ALIGN = [null,[],[6,18],[6,22],[6,26],[6,30],[6,34],
+               [6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],
+               [6,34,62],[6,26,46,66],[6,26,48,70]];
+
+  var REMAINDER = [0,0,7,7,7,7,7,0,0,0,0,0,0,0,3,3];
+
+  var ECBITS = { L:1, M:0 };   // 2-bit EC indicator
+
+  /* ---- GF(256) ---- */
+  var EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  (function(){
+    var x = 1;
+    for (var i = 0; i < 255; i++){
+      EXP[i] = x;
+      LOG[x] = i;
+      x <<= 1;
+      if (x & 0x100) x ^= 0x11D;
+    }
+    for (var j = 255; j < 512; j++) EXP[j] = EXP[j-255];
+  })();
+
+  function mul(a,b){ return (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]]; }
+
+  function genPoly(deg){
+    var p = [1];
+    for (var i = 0; i < deg; i++){
+      var np = new Array(p.length + 1).fill(0);
+      for (var j = 0; j < p.length; j++){
+        np[j]   ^= p[j];
+        np[j+1] ^= mul(p[j], EXP[i]);
+      }
+      p = np;
+    }
+    return p;
+  }
+
+  function ecBytes(data, n){
+    var gen = genPoly(n);
+    var res = new Array(data.length + n).fill(0);
+    for (var i = 0; i < data.length; i++) res[i] = data[i];
+    for (var i = 0; i < data.length; i++){
+      var f = res[i];
+      if (f === 0) continue;
+      for (var j = 0; j < gen.length; j++) res[i+j] ^= mul(gen[j], f);
+    }
+    return res.slice(data.length);
+  }
+
+  /* ---- bit stream ---- */
+  function Bits(){ this.a = []; }
+  Bits.prototype.put = function(v, n){
+    for (var i = n - 1; i >= 0; i--) this.a.push((v >>> i) & 1);
+  };
+
+  function pickVersion(len, ec){
+    for (var v = 1; v <= 15; v++){
+      var b = BLOCKS[ec][v];
+      var dataBytes = b[1]*b[2] + b[3]*b[4];
+      var cciBits = v < 10 ? 8 : 16;
+      var need = 4 + cciBits + len*8;
+      if (need <= dataBytes * 8) return v;
+    }
+    return -1;
+  }
+
+  function buildCodewords(bytes, version, ec){
+    var b = BLOCKS[ec][version];
+    var ecLen = b[0], totalData = b[1]*b[2] + b[3]*b[4];
+    var cciBits = version < 10 ? 8 : 16;
+
+    var bs = new Bits();
+    bs.put(4, 4);
+    bs.put(bytes.length, cciBits);
+    for (var i = 0; i < bytes.length; i++) bs.put(bytes[i], 8);
+
+    var cap = totalData * 8;
+    var term = Math.min(4, cap - bs.a.length);
+    bs.put(0, term);
+    while (bs.a.length % 8 !== 0) bs.a.push(0);
+
+    var data = [];
+    for (var i = 0; i < bs.a.length; i += 8){
+      var v = 0;
+      for (var j = 0; j < 8; j++) v = (v << 1) | bs.a[i+j];
+      data.push(v);
+    }
+    var pads = [0xEC, 0x11], k = 0;
+    while (data.length < totalData) data.push(pads[k++ % 2]);
+
+    // split into blocks
+    var blocks = [], pos = 0, spec = [];
+    for (var i = 0; i < b[1]; i++) spec.push(b[2]);
+    for (var i = 0; i < b[3]; i++) spec.push(b[4]);
+
+    for (var i = 0; i < spec.length; i++){
+      var d = data.slice(pos, pos + spec[i]);
+      pos += spec[i];
+      blocks.push({ d:d, e:ecBytes(d, ecLen) });
+    }
+
+    var out = [];
+    var maxD = Math.max.apply(null, spec);
+    for (var i = 0; i < maxD; i++)
+      for (var j = 0; j < blocks.length; j++)
+        if (i < blocks[j].d.length) out.push(blocks[j].d[i]);
+    for (var i = 0; i < ecLen; i++)
+      for (var j = 0; j < blocks.length; j++) out.push(blocks[j].e[i]);
+
+    if (out.length !== TOTAL[version]) throw new Error("codeword count " + out.length);
+    return out;
+  }
+
+  /* ---- matrix ---- */
+  function makeMatrix(version){
+    var n = version * 4 + 17;
+    var m = [], r = [];
+    for (var i = 0; i < n; i++){
+      m.push(new Int8Array(n).fill(-1));
+      r.push(new Uint8Array(n));
+    }
+
+    function finder(cx, cy){
+      for (var dy = -1; dy <= 7; dy++)
+        for (var dx = -1; dx <= 7; dx++){
+          var x = cx + dx, y = cy + dy;
+          if (x < 0 || y < 0 || x >= n || y >= n) continue;
+          var on = (dx >= 0 && dx <= 6 && (dy === 0 || dy === 6)) ||
+                   (dy >= 0 && dy <= 6 && (dx === 0 || dx === 6)) ||
+                   (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4);
+          m[y][x] = on ? 1 : 0;
+          r[y][x] = 1;
+        }
+    }
+    finder(0,0); finder(n-7,0); finder(0,n-7);
+
+    // timing
+    for (var i = 8; i < n-8; i++){
+      m[6][i] = (i % 2 === 0) ? 1 : 0; r[6][i] = 1;
+      m[i][6] = (i % 2 === 0) ? 1 : 0; r[i][6] = 1;
+    }
+
+    // alignment
+    var ap = ALIGN[version];
+    for (var a = 0; a < ap.length; a++)
+      for (var b2 = 0; b2 < ap.length; b2++){
+        var cx = ap[a], cy = ap[b2];
+        var corner = (cx === 6 && cy === 6) ||
+                     (cx === 6 && cy === n-7) ||
+                     (cx === n-7 && cy === 6);
+        if (corner) continue;
+        for (var dy = -2; dy <= 2; dy++)
+          for (var dx = -2; dx <= 2; dx++){
+            var on = Math.max(Math.abs(dx), Math.abs(dy)) !== 1;
+            m[cy+dy][cx+dx] = on ? 1 : 0;
+            r[cy+dy][cx+dx] = 1;
+          }
+      }
+
+    // dark module + format reserve
+    m[n-8][8] = 1; r[n-8][8] = 1;
+    for (var i = 0; i <= 8; i++){
+      if (!r[8][i]){ r[8][i] = 1; m[8][i] = 0; }
+      if (!r[i][8]){ r[i][8] = 1; m[i][8] = 0; }
+    }
+    for (var i = n-8; i < n; i++){
+      if (!r[8][i]){ r[8][i] = 1; m[8][i] = 0; }
+      if (!r[i][8]){ r[i][8] = 1; m[i][8] = 0; }
+    }
+
+    // version info reserve (v7+)
+    if (version >= 7){
+      for (var i = 0; i < 6; i++)
+        for (var j = 0; j < 3; j++){
+          r[i][n-11+j] = 1; m[i][n-11+j] = 0;
+          r[n-11+j][i] = 1; m[n-11+j][i] = 0;
+        }
+    }
+
+    return { m:m, r:r, n:n };
+  }
+
+  function placeData(mx, cw, version){
+    var m = mx.m, r = mx.r, n = mx.n;
+    var bits = [];
+    for (var i = 0; i < cw.length; i++)
+      for (var j = 7; j >= 0; j--) bits.push((cw[i] >>> j) & 1);
+    for (var i = 0; i < REMAINDER[version]; i++) bits.push(0);
+
+    var idx = 0, up = true;
+    for (var col = n - 1; col > 0; col -= 2){
+      if (col === 6) col--;
+      for (var t = 0; t < n; t++){
+        var row = up ? (n - 1 - t) : t;
+        for (var c = 0; c < 2; c++){
+          var x = col - c;
+          if (r[row][x]) continue;
+          m[row][x] = idx < bits.length ? bits[idx] : 0;
+          idx++;
+        }
+      }
+      up = !up;
+    }
+    return idx;
+  }
+
+  function maskFn(k, x, y){
+    switch(k){
+      case 0: return (x + y) % 2 === 0;
+      case 1: return y % 2 === 0;
+      case 2: return x % 3 === 0;
+      case 3: return (x + y) % 3 === 0;
+      case 4: return (Math.floor(y/2) + Math.floor(x/3)) % 2 === 0;
+      case 5: return ((x*y) % 2) + ((x*y) % 3) === 0;
+      case 6: return (((x*y) % 2) + ((x*y) % 3)) % 2 === 0;
+      case 7: return (((x+y) % 2) + ((x*y) % 3)) % 2 === 0;
+    }
+  }
+
+  function applyMask(mx, k){
+    var out = [];
+    for (var y = 0; y < mx.n; y++){
+      out.push(new Int8Array(mx.n));
+      for (var x = 0; x < mx.n; x++){
+        var v = mx.m[y][x];
+        out[y][x] = (!mx.r[y][x] && maskFn(k, x, y)) ? (v ^ 1) : v;
+      }
+    }
+    return out;
+  }
+
+  function formatBits(ec, mask){
+    var data = (ECBITS[ec] << 3) | mask;
+    var v = data << 10;
+    for (var i = 4; i >= 0; i--)
+      if ((v >>> (i + 10)) & 1) v ^= 0x537 << i;
+    return ((data << 10) | v) ^ 0x5412;
+  }
+
+  function versionBits(version){
+    var v = version << 12;
+    for (var i = 5; i >= 0; i--)
+      if ((v >>> (i + 12)) & 1) v ^= 0x1F25 << i;
+    return (version << 12) | v;
+  }
+
+  function writeFormat(g, n, ec, mask){
+    var f = formatBits(ec, mask);
+    for (var i = 0; i < 15; i++){
+      var bit = (f >>> i) & 1;
+      // vertical / horizontal around top-left
+      if (i < 6)       g[i][8] = bit;
+      else if (i === 6) g[7][8] = bit;
+      else if (i === 7) g[8][8] = bit;
+      else if (i === 8) g[8][7] = bit;
+      else              g[8][14 - i] = bit;
+
+      if (i < 8) g[8][n - 1 - i] = bit;
+      else       g[n - 15 + i][8] = bit;
+    }
+    g[n-8][8] = 1;
+  }
+
+  function writeVersion(g, n, version){
+    if (version < 7) return;
+    var vb = versionBits(version);
+    for (var i = 0; i < 18; i++){
+      var bit = (vb >>> i) & 1;
+      var a = Math.floor(i / 3), b = i % 3;
+      g[a][n - 11 + b] = bit;
+      g[n - 11 + b][a] = bit;
+    }
+  }
+
+  function penalty(g, n){
+    var p = 0, i, j, run, dark = 0;
+
+    for (i = 0; i < n; i++){
+      run = 1;
+      for (j = 1; j < n; j++){
+        if (g[i][j] === g[i][j-1]) run++;
+        else { if (run >= 5) p += run - 2; run = 1; }
+      }
+      if (run >= 5) p += run - 2;
+      run = 1;
+      for (j = 1; j < n; j++){
+        if (g[j][i] === g[j-1][i]) run++;
+        else { if (run >= 5) p += run - 2; run = 1; }
+      }
+      if (run >= 5) p += run - 2;
+    }
+
+    for (i = 0; i < n-1; i++)
+      for (j = 0; j < n-1; j++){
+        var s = g[i][j] + g[i][j+1] + g[i+1][j] + g[i+1][j+1];
+        if (s === 0 || s === 4) p += 3;
+      }
+
+    var pat1 = [1,0,1,1,1,0,1,0,0,0,0], pat2 = [0,0,0,0,1,0,1,1,1,0,1];
+    function match(get, len){
+      for (var a = 0; a + 11 <= len; a++){
+        var ok1 = true, ok2 = true;
+        for (var b = 0; b < 11; b++){
+          var v = get(a + b);
+          if (v !== pat1[b]) ok1 = false;
+          if (v !== pat2[b]) ok2 = false;
+        }
+        if (ok1 || ok2) p += 40;
+      }
+    }
+    for (i = 0; i < n; i++){
+      (function(row){ match(function(k){ return g[row][k]; }, n); })(i);
+      (function(col){ match(function(k){ return g[k][col]; }, n); })(i);
+    }
+
+    for (i = 0; i < n; i++) for (j = 0; j < n; j++) dark += g[i][j];
+    var pct = dark * 100 / (n * n);
+    p += Math.floor(Math.abs(pct - 50) / 5) * 10;
+
+    return p;
+  }
+
+  function encode(text, ecLevel){
+    var ec = ecLevel || "M";
+    var bytes = [];
+    for (var i = 0; i < text.length; i++){
+      var c = text.charCodeAt(i);
+      if (c < 128) bytes.push(c);
+      else throw new Error("ASCII only");
+    }
+
+    var version = pickVersion(bytes.length, ec);
+    if (version < 0) throw new Error("too long");
+
+    var cw = buildCodewords(bytes, version, ec);
+    var mx = makeMatrix(version);
+    placeData(mx, cw, version);
+
+    var best = null, bestP = Infinity, bestK = 0;
+    for (var k = 0; k < 8; k++){
+      var g = applyMask(mx, k);
+      writeFormat(g, mx.n, ec, k);
+      writeVersion(g, mx.n, version);
+      var p = penalty(g, mx.n);
+      if (p < bestP){ bestP = p; best = g; bestK = k; }
+    }
+
+    return { size:mx.n, modules:best, version:version, mask:bestK, ec:ec };
+  }
+
+  return { encode:encode };
+})();
+(function(){
+  "use strict";
+
+  /* ---------- the dialogue - edit here ---------- */
+
+  /* the heading at the top of the page (also the name of the browser tab) */
+  var TITLE = "Talking to a friend";
+
+  /* The two children - "boy" and "girl" are only used below in LINES to say
+     who speaks. picture: leave it empty to use a drawn stand-in, or give the
+     file name of your own drawing, e.g. "boy.png" (a PNG with a transparent
+     background works best). colour: that child's speech bubbles. */
+  var PEOPLE = {
+    boy:  { side:"left",  colour:"#1C9786", picture:"" },
+    girl: { side:"right", colour:"#E8603F", picture:"" }
+  };
+
+  /* One entry per speech bubble, top to bottom. clip is the recording's file
+     name without ".mp3" - put it in the audio folder (next to index.html also
+     works). A bubble whose clip is missing is greyed out.
+     A word in [square brackets] is coloured - see WORD_COLOURS below. */
+  var LINES = [
+    { who:"boy",  text:"Good Morning!",                           clip:"01" },
+    { who:"girl", text:"Hello, how are you?",                     clip:"02" },
+    { who:"boy",  text:"I am [good]/[okay]/[bad]. How are you?",  clip:"03" },
+    { who:"girl", text:"I am [good]/[okay]/[bad].",               clip:"04" },
+    { who:"boy",  text:"Ok, goodbye.",                            clip:"05" },
+    { who:"girl", text:"See you later!",                          clip:"06" }
+  ];
+
+  /* colours for the words in [square brackets]; add more words as needed */
+  var WORD_COLOURS = {
+    good:"#3E9A52",
+    okay:"#E0A100",
+    bad: "#D63A2C"
+  };
+
+  /* ---------- nothing below needs changing ---------- */
+
+  var scene    = document.getElementById("scene");
+  var linesBox = document.getElementById("lines");
+  var player   = document.getElementById("player");
+
+  document.title = TITLE;
+  document.getElementById("title").textContent = TITLE;
+
+  /* ---------- colours ---------- */
+
+  /* blend a colour towards white (or towards ink) for the lighter and darker
+     shades of a bubble */
+  function mix(hex, amount, base){
+    base = base || [255,255,255];
+    var n = parseInt(hex.replace("#", ""), 16);
+    var c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    return "rgb(" + c.map(function(v, k){
+      return Math.round(v * amount + base[k] * (1 - amount));
+    }).join(",") + ")";
+  }
+
+  function setColours(el, hex){
+    el.style.setProperty("--c", hex);
+    el.style.setProperty("--c-light", mix(hex, .15));
+    el.style.setProperty("--c-glow", mix(hex, .32));
+    el.style.setProperty("--c-dark", mix(hex, .72, [46,42,58]));
+  }
+
+  /* ---------- drawn stand-in children ---------- */
+  /* used until real pictures are added */
+
+  var LOOKS = {
+    girl: { skin:"#F6C9A4", hair:"#8A4B2A", trousers:"#3D5A80", bunches:true  },
+    boy:  { skin:"#B97B52", hair:"#2A2230", trousers:"#46406E", bunches:false }
+  };
+
+  function drawKid(look, shirt){
+    var k = LOOKS[look] || LOOKS.girl;
+    var back = "", front;
+
+    if (k.bunches){
+      back = '<circle cx="33" cy="86" r="20" fill="' + k.hair + '"/>' +
+             '<circle cx="167" cy="86" r="20" fill="' + k.hair + '"/>' +
+             '<circle cx="49" cy="80" r="6" fill="#FFC93C"/>' +
+             '<circle cx="151" cy="80" r="6" fill="#FFC93C"/>';
+      front = '<path d="M44 96 C38 14 162 14 156 96 C150 70 132 57 100 58 C68 57 50 70 44 96 Z" fill="' + k.hair + '"/>' +
+              '<path d="M100 38 L100 58" stroke="' + mix(k.hair, .75, [0,0,0]) + '" stroke-width="2.5" stroke-linecap="round"/>';
+    } else {
+      front = '<path d="M44 90 C40 16 160 16 156 90 C150 66 128 54 104 60 C96 50 76 54 68 62 C58 70 50 78 44 90 Z" fill="' + k.hair + '"/>' +
+              '<path d="M98 38 Q100 22 114 26" stroke="' + k.hair + '" stroke-width="7" stroke-linecap="round" fill="none"/>';
+    }
+
+    return '<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<ellipse cx="100" cy="292" rx="62" ry="7" fill="rgba(46,42,58,.12)"/>' +
+      '<rect x="72" y="226" width="22" height="58" rx="10" fill="' + k.trousers + '"/>' +
+      '<rect x="106" y="226" width="22" height="58" rx="10" fill="' + k.trousers + '"/>' +
+      '<ellipse cx="80" cy="286" rx="18" ry="9" fill="#2E2A3A"/>' +
+      '<ellipse cx="120" cy="286" rx="18" ry="9" fill="#2E2A3A"/>' +
+      '<path d="M66 172 Q44 198 42 224" stroke="' + shirt + '" stroke-width="20" stroke-linecap="round" fill="none"/>' +
+      '<path d="M134 172 Q156 198 158 224" stroke="' + shirt + '" stroke-width="20" stroke-linecap="round" fill="none"/>' +
+      '<circle cx="42" cy="230" r="11" fill="' + k.skin + '"/>' +
+      '<circle cx="158" cy="230" r="11" fill="' + k.skin + '"/>' +
+      '<rect x="90" y="138" width="20" height="18" rx="6" fill="' + k.skin + '"/>' +
+      '<path d="M60 178 Q60 150 100 150 Q140 150 140 178 L144 240 Q100 250 56 240 Z" fill="' + shirt + '"/>' +
+      back +
+      '<circle cx="46" cy="98" r="11" fill="' + k.skin + '"/>' +
+      '<circle cx="154" cy="98" r="11" fill="' + k.skin + '"/>' +
+      '<circle cx="100" cy="92" r="55" fill="' + k.skin + '"/>' +
+      front +
+      '<circle cx="80" cy="96" r="6.5" fill="#2E2A3A"/><circle cx="82.5" cy="93.5" r="2" fill="#FFFFFF"/>' +
+      '<circle cx="120" cy="96" r="6.5" fill="#2E2A3A"/><circle cx="122.5" cy="93.5" r="2" fill="#FFFFFF"/>' +
+      '<circle cx="67" cy="112" r="8" fill="#FF7A7A" opacity=".35"/>' +
+      '<circle cx="133" cy="112" r="8" fill="#FF7A7A" opacity=".35"/>' +
+      '<path class="mouth-shut" d="M88 116 Q100 128 112 116" stroke="#2E2A3A" stroke-width="4" stroke-linecap="round" fill="none"/>' +
+      '<g class="mouth-open">' +
+        '<ellipse cx="100" cy="121" rx="10" ry="9" fill="#6B2B33"/>' +
+        '<ellipse cx="100" cy="126" rx="6" ry="3.5" fill="#FF8A8A"/>' +
+      '</g>' +
+    '</svg>';
+  }
+
+  /* ---------- icons ---------- */
+
+  var SPEAKER_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#FFFFFF"/>' +
+      '<path class="wave" d="M15.5 9a4 4 0 0 1 0 6"/>' +
+      '<path class="wave wave2" d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/>' +
+    '</svg>';
+
+  /* ---------- the two children ---------- */
+
+  Object.keys(PEOPLE).forEach(function(key){
+    var p  = PEOPLE[key];
+    var el = document.getElementById(p.side === "right" ? "personRight" : "personLeft");
+    setColours(el, p.colour);
+
+    var sprite = document.createElement("div");
+    sprite.className = "sprite";
+    if (p.picture){
+      var img = document.createElement("img");
+      img.src = p.picture;
+      img.alt = "";
+      img.draggable = false;
+      sprite.appendChild(img);
+    } else {
+      sprite.innerHTML = drawKid(key, p.colour);
+    }
+
+    el.appendChild(sprite);
+    p.el = el;
+  });
+
+  /* ---------- speech bubbles ---------- */
+
+  /* fill a bubble with its text, colouring the words in [square brackets] */
+  function fillText(box, text){
+    var parts = text.split(/\[([^\]]+)\]/);
+    for (var k = 0; k < parts.length; k++){
+      if (!parts[k]) continue;
+      if (k % 2 === 0){ box.appendChild(document.createTextNode(parts[k])); continue; }
+      var w = document.createElement("span");
+      w.className = "word";
+      w.textContent = parts[k];
+      var col = WORD_COLOURS[parts[k].toLowerCase()];
+      if (col) w.style.color = col;
+      box.appendChild(w);
+    }
+  }
+
+  LINES.forEach(function(line, i){
+    var p  = PEOPLE[line.who];
+    var li = document.createElement("li");
+    li.className = p.side === "right" ? "right" : "left";
+
+    var b = document.createElement("button");
+    b.className = "bubble";
+    b.setAttribute("data-line", i);
+    b.setAttribute("aria-label", line.text.replace(/[\[\]]/g, ""));
+    setColours(b, p.colour);
+    b.innerHTML = '<span class="speaker">' + SPEAKER_ICON + '</span><span class="text"></span>';
+    fillText(b.querySelector(".text"), line.text);
+
+    li.appendChild(b);
+    linesBox.appendChild(li);
+    line.el  = b;
+    line.src = "./audio/" + line.clip + ".mp3";
+  });
+
+  /* ---------- spoken lines ---------- */
+
+  var current = -1;      /* the line playing now, -1 when quiet */
+
+  function markSilent(i){
+    LINES[i].silent = true;
+    LINES[i].el.classList.add("silent");
+  }
+
+  /* Each clip is looked for in ./audio/ first and next to index.html second,
+     and settled before any tap, so play() always runs inside the gesture. A
+     plain GET is used so that offline the service worker answers from its
+     cache - a HEAD request would go past it and fail. */
+  function findClip(line, i){
+    var inFolder = "./audio/" + line.clip + ".mp3";
+    var beside   = "./" + line.clip + ".mp3";
+    fetch(inFolder)
+      .then(function(r){
+        if (r.ok){ line.src = inFolder; return; }
+        throw new Error("not in the audio folder");
+      })
+      .catch(function(){
+        return fetch(beside).then(function(r){
+          if (r.ok) line.src = beside;
+          else markSilent(i);
+        });
+      })
+      .catch(function(){ markSilent(i); });
+  }
+
+  function findClips(){
+    LINES.forEach(function(line, i){ if (!line.silent) findClip(line, i); });
+  }
+
+  function mark(i){
+    if (current >= 0) LINES[current].el.classList.remove("playing");
+    Array.prototype.forEach.call(document.querySelectorAll(".person.talking"), function(el){
+      el.classList.remove("talking");
+    });
+    current = i;
+    scene.classList.toggle("busy", i >= 0);
+    if (i < 0) return;
+    LINES[i].el.classList.add("playing");
+    PEOPLE[LINES[i].who].el.classList.add("talking");
+    LINES[i].el.scrollIntoView({ block:"nearest", behavior:"smooth" });
+  }
+
+  function stop(){
+    player.pause();
+    mark(-1);
+  }
+
+  function playLine(i){
+    var line = LINES[i];
+    if (!line || line.silent) return;
+    player.pause();
+    mark(i);
+    try {
+      player.src = line.src;
+      var p = player.play();
+      if (p && p.catch) p.catch(function(err){
+        if (err && err.name === "AbortError") return;        /* another tap came first */
+        if (err && err.name === "NotAllowedError"){ stop(); return; }
+        clipFailed(i);
+      });
+    } catch (e){ clipFailed(i); }
+  }
+
+  /* a missing clip can report twice (the error event and play()), once is enough */
+  function clipFailed(i){
+    if (LINES[i].silent) return;
+    markSilent(i);
+    if (i === current) stop();
+  }
+
+  player.addEventListener("ended", stop);
+  player.addEventListener("error", function(){ if (current >= 0) clipFailed(current); });
+
+  /* tap a bubble to hear it, tap it again to stop */
+  linesBox.addEventListener("click", function(e){
+    var b = e.target.closest(".bubble");
+    if (!b) return;
+    var i = +b.getAttribute("data-line");
+    if (LINES[i].silent) return;
+    if (i === current) stop();
+    else playLine(i);
+  });
+
+  findClips();
+
+  /* ---------- share sheet ---------- */
+
+  var shareSheet = document.getElementById("shareSheet");
+  var qrCard     = document.getElementById("qrCard");
+  var urlLine    = document.getElementById("urlLine");
+
+  function pageUrl(){
+    var web = location.protocol === "https:" || location.protocol === "http:";
+    return web ? location.origin + location.pathname : "";
+  }
+
+  function qrSvg(text){
+    var r;
+    try { r = QR.encode(text, "M"); }
+    catch (e){
+      try { r = QR.encode(text, "L"); }
+      catch (e2){ return "<p class='empty-note'>This address is too long for a code.</p>"; }
+    }
+    var q = 4, n = r.size, total = n + q * 2, d = "";
+    for (var y = 0; y < n; y++)
+      for (var x = 0; x < n; x++)
+        if (r.modules[y][x]) d += "M" + (x + q) + " " + (y + q) + "h1v1h-1z";
+    return '<svg viewBox="0 0 ' + total + ' ' + total + '" shape-rendering="crispEdges" ' +
+           'xmlns="http://www.w3.org/2000/svg"><rect width="' + total + '" height="' + total +
+           '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+  }
+
+  document.getElementById("shareBtn").addEventListener("click", function(){
+    var url = pageUrl();
+    if (url){
+      qrCard.innerHTML = qrSvg(url);
+      urlLine.textContent = url;
+    } else {
+      qrCard.innerHTML = "<p class='empty-note'>Put the page online first - then this shows its code.</p>";
+      urlLine.textContent = "";
+    }
+    shareSheet.classList.add("open");
+  });
+  document.getElementById("shareClose").addEventListener("click", function(){
+    shareSheet.classList.remove("open");
+  });
+  shareSheet.addEventListener("click", function(e){
+    if (e.target === shareSheet) shareSheet.classList.remove("open");
+  });
+
+  /* ---------- no zooming ---------- */
+
+  /* Safari ignores user-scalable=no, so pinch and double-tap zoom are refused
+     here instead. Scrolling up and down still works. */
+  ["gesturestart","gesturechange","gestureend"].forEach(function(t){
+    document.addEventListener(t, function(e){ e.preventDefault(); }, { passive:false });
+  });
+  document.addEventListener("dblclick", function(e){ e.preventDefault(); }, { passive:false });
+  window.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+
+  /* ---------- fit the screen, also after turning the iPad ---------- */
+
+  var MIN_SIZE = 16, MAX_SIZE = 44;      /* text size in the bubbles, in px */
+
+  /* the dialogue fits when nothing sticks out below or to the side */
+  function fits(){
+    return scene.scrollHeight <= scene.clientHeight &&
+           scene.scrollWidth  <= scene.clientWidth;
+  }
+
+  /* Sizes are tried from both ends, halving the gap each time, and the largest
+     that fits is kept. A very long dialogue gets MIN_SIZE and can be scrolled. */
+  function fit(){
+    var lo = MIN_SIZE, hi = MAX_SIZE;
+    scene.style.fontSize = hi + "px";
+    if (fits()) return;
+    for (var k = 0; k < 9; k++){
+      var mid = (lo + hi) / 2;
+      scene.style.fontSize = mid + "px";
+      if (fits()) lo = mid; else hi = mid;
+    }
+    scene.style.fontSize = lo + "px";
+  }
+
+  var fitQueued = false;
+  function refit(){
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(function(){ fitQueued = false; fit(); });
+  }
+
+  window.addEventListener("resize", refit);
+  window.addEventListener("orientationchange", function(){ setTimeout(fit, 250); });
+  Array.prototype.forEach.call(scene.querySelectorAll(".sprite img"), function(img){
+    img.addEventListener("load", refit);
+  });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  fit();
+
+  /* ---------- offline storage ---------- */
+
+  var VERSION = "v6";
+  var statusEl = document.getElementById("status");
+
+  function showStatus(){
+    var saved = ("serviceWorker" in navigator) && navigator.serviceWorker.controller;
+    statusEl.textContent = VERSION + (saved ? " · saved on this iPad" : "");
+  }
+
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("./sw.js", { scope:"./" })
+        .then(showStatus)
+        .catch(function(){ statusEl.textContent = VERSION; });
+    });
+    /* On the very first visit the clips and pictures load before the offline
+       copy exists, so once it takes over they are fetched again to be kept. */
+    navigator.serviceWorker.addEventListener("controllerchange", function(){
+      showStatus();
+      findClips();
+      Object.keys(PEOPLE).forEach(function(key){
+        if (PEOPLE[key].picture) fetch(PEOPLE[key].picture).catch(function(){});
+      });
+    });
+  }
+  showStatus();
+})();
+</script>
+</body>
+</html>
