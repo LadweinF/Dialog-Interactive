@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -126,12 +126,17 @@
 
   /* ---------- speech bubbles ---------- */
   .lines{
+    position:relative;
     list-style:none;padding:0;
     display:flex;flex-direction:column;gap:.6em;
   }
+  /* room on the right for the arrow that points back up */
+  .lines.has-arrow{padding-right:1.5em;}
   .lines li{display:flex;}
   .lines li.left{justify-content:flex-start;padding-left:.45em;}
   .lines li.right{justify-content:flex-end;padding-right:.45em;}
+  /* a little extra room before the bonus bubbles */
+  .lines li.bonus-start{margin-top:.7em;}
 
   .bubble{
     position:relative;max-width:90%;
@@ -165,6 +170,24 @@
     background:var(--c);border-radius:999px;
   }
   .speaker svg{width:.95em;height:.95em;}
+
+  /* bonus bubbles get a star on the inner top corner */
+  .star{
+    position:absolute;top:-.65em;
+    width:1.35em;height:1.35em;
+    pointer-events:none;
+  }
+  .left .star{right:-.5em;}
+  .right .star{left:-.5em;}
+  .star svg{display:block;width:100%;height:100%;}
+
+  /* the arrow from a bubble back up to an earlier one */
+  .arrows{
+    position:absolute;left:0;top:0;
+    overflow:visible;
+    pointer-events:none;
+  }
+
   .playing .wave{animation:wave .9s infinite;}
   .playing .wave2{animation-delay:.3s;}
   @keyframes wave{
@@ -262,7 +285,7 @@
     <figure class="person" id="personRight"></figure>
   </main>
 
-  <div class="status" id="status">v6</div>
+  <div class="status" id="status">v9</div>
 
 </div>
 
@@ -666,14 +689,18 @@ var QR = (function(){
   /* One entry per speech bubble, top to bottom. clip is the recording's file
      name without ".mp3" - put it in the audio folder (next to index.html also
      works). A bubble whose clip is missing is greyed out.
-     A word in [square brackets] is coloured - see WORD_COLOURS below. */
+     A word in [square brackets] is coloured - see WORD_COLOURS below.
+     bonus:true puts a small star on the bubble to mark a bonus task.
+     backTo:5 draws an arrow from the bubble back up to bubble number 5. */
   var LINES = [
-    { who:"boy",  text:"Good Morning!",                           clip:"01" },
-    { who:"girl", text:"Hello, how are you?",                     clip:"02" },
-    { who:"boy",  text:"I am [good]/[okay]/[bad]. How are you?",  clip:"03" },
-    { who:"girl", text:"I am [good]/[okay]/[bad].",               clip:"04" },
-    { who:"boy",  text:"Ok, goodbye.",                            clip:"05" },
-    { who:"girl", text:"See you later!",                          clip:"06" }
+    { who:"boy",  text:"1. Good morning!",                                  clip:"01" },
+    { who:"girl", text:"2. Hello, how are you?",                            clip:"02" },
+    { who:"boy",  text:"3. I am [good]/[okay]/[bad]. How are you?",         clip:"03" },
+    { who:"girl", text:"4. I am [good]/[okay]/[bad].",                      clip:"04" },
+    { who:"boy",  text:"5. Okay, goodbye.",                                 clip:"05" },
+    { who:"girl", text:"6. See you later!",                                 clip:"06" },
+    { who:"boy",  text:"(7.) One more thing. What's your favourite colour?",  clip:"07", bonus:true },
+    { who:"girl", text:"(8.) My favourite colour is ...",                     clip:"08", bonus:true, backTo:5 }
   ];
 
   /* colours for the words in [square brackets]; add more words as needed */
@@ -773,6 +800,11 @@ var QR = (function(){
       '<path class="wave" d="M15.5 9a4 4 0 0 1 0 6"/>' +
       '<path class="wave wave2" d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/>' +
     '</svg>';
+  var STAR_ICON =
+    '<svg viewBox="0 0 24 24">' +
+      '<path d="M12 2.2l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z" ' +
+            'fill="#FFC94A" stroke="#2E2A3A" stroke-width="1.8" stroke-linejoin="round"/>' +
+    '</svg>';
 
   /* ---------- the two children ---------- */
 
@@ -818,13 +850,15 @@ var QR = (function(){
     var p  = PEOPLE[line.who];
     var li = document.createElement("li");
     li.className = p.side === "right" ? "right" : "left";
+    if (line.bonus && !(LINES[i - 1] && LINES[i - 1].bonus)) li.className += " bonus-start";
 
     var b = document.createElement("button");
     b.className = "bubble";
     b.setAttribute("data-line", i);
-    b.setAttribute("aria-label", line.text.replace(/[\[\]]/g, ""));
+    b.setAttribute("aria-label", (line.bonus ? "Bonus: " : "") + line.text.replace(/[\[\]]/g, ""));
     setColours(b, p.colour);
-    b.innerHTML = '<span class="speaker">' + SPEAKER_ICON + '</span><span class="text"></span>';
+    b.innerHTML = '<span class="speaker">' + SPEAKER_ICON + '</span><span class="text"></span>' +
+                  (line.bonus ? '<span class="star">' + STAR_ICON + '</span>' : '');
     fillText(b.querySelector(".text"), line.text);
 
     li.appendChild(b);
@@ -832,6 +866,61 @@ var QR = (function(){
     line.el  = b;
     line.src = "./audio/" + line.clip + ".mp3";
   });
+
+  /* ---------- arrows back to an earlier bubble ---------- */
+
+  var SVG_NS     = "http://www.w3.org/2000/svg";
+  var arrowLayer = document.createElementNS(SVG_NS, "svg");
+  var hasArrow   = LINES.some(function(line){ return line.backTo && LINES[line.backTo - 1]; });
+
+  arrowLayer.setAttribute("class", "arrows");
+  arrowLayer.setAttribute("aria-hidden", "true");
+  linesBox.appendChild(arrowLayer);
+  linesBox.classList.toggle("has-arrow", hasArrow);
+
+  function clearArrows(){
+    arrowLayer.innerHTML = "";
+    arrowLayer.setAttribute("width", 0);
+    arrowLayer.setAttribute("height", 0);
+  }
+
+  /* The arrow leaves the top right of its bubble, runs along the free strip on
+     the right of the bubbles and turns into the bubble it points to. Offsets
+     are measured rather than screen positions, so a bubble that grows while it
+     plays does not bend the arrow. */
+  function drawArrows(){
+    clearArrows();
+    if (!hasArrow) return;
+    var em   = parseFloat(getComputedStyle(linesBox).fontSize);
+    var w    = linesBox.clientWidth, h = linesBox.clientHeight;
+    var lane = w - 0.75 * em;          /* the middle of the free strip */
+    var r    = 0.5 * em;               /* how round the corners are */
+    var head = 0.5 * em;
+    var out  = "";
+
+    arrowLayer.setAttribute("width", w);
+    arrowLayer.setAttribute("height", h);
+
+    LINES.forEach(function(line){
+      var to = line.backTo && LINES[line.backTo - 1];
+      if (!to) return;
+      var a = line.el, b = to.el;
+      var x0 = a.offsetLeft + a.offsetWidth + 0.05 * em, y0 = a.offsetTop + 0.5 * em;
+      var x1 = b.offsetLeft + b.offsetWidth + 0.2 * em,  y1 = b.offsetTop + b.offsetHeight / 2;
+      var up = y1 < y0 ? -1 : 1;
+      out += '<path d="M' + x0 + ' ' + y0 +
+             ' H' + (lane - r) +
+             ' Q' + lane + ' ' + y0 + ' ' + lane + ' ' + (y0 + up * r) +
+             ' V' + (y1 - up * r) +
+             ' Q' + lane + ' ' + y1 + ' ' + (lane - r) + ' ' + y1 +
+             ' H' + (x1 + head * 0.8) + '" fill="none" stroke="#2E2A3A" stroke-width="' + (0.16 * em) +
+             '" stroke-linecap="round" stroke-linejoin="round"/>';
+      out += '<path d="M' + x1 + ' ' + y1 +
+             ' L' + (x1 + head) + ' ' + (y1 - head * 0.75) +
+             ' L' + (x1 + head) + ' ' + (y1 + head * 0.75) + ' Z" fill="#2E2A3A"/>';
+    });
+    arrowLayer.innerHTML = out;
+  }
 
   /* ---------- spoken lines ---------- */
 
@@ -992,14 +1081,17 @@ var QR = (function(){
      that fits is kept. A very long dialogue gets MIN_SIZE and can be scrolled. */
   function fit(){
     var lo = MIN_SIZE, hi = MAX_SIZE;
+    clearArrows();                     /* an old arrow must not get in the way */
     scene.style.fontSize = hi + "px";
-    if (fits()) return;
-    for (var k = 0; k < 9; k++){
-      var mid = (lo + hi) / 2;
-      scene.style.fontSize = mid + "px";
-      if (fits()) lo = mid; else hi = mid;
+    if (!fits()){
+      for (var k = 0; k < 9; k++){
+        var mid = (lo + hi) / 2;
+        scene.style.fontSize = mid + "px";
+        if (fits()) lo = mid; else hi = mid;
+      }
+      scene.style.fontSize = lo + "px";
     }
-    scene.style.fontSize = lo + "px";
+    drawArrows();
   }
 
   var fitQueued = false;
@@ -1019,7 +1111,7 @@ var QR = (function(){
 
   /* ---------- offline storage ---------- */
 
-  var VERSION = "v6";
+  var VERSION = "v9";
   var statusEl = document.getElementById("status");
 
   function showStatus(){
