@@ -75,9 +75,34 @@
   .qr-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink);}
   .qr-btn svg{width:30px;height:30px;}
 
+  .tools{position:relative;flex:0 0 auto;display:flex;align-items:center;gap:6px;}
+
+  .gear-btn{
+    width:52px;height:52px;padding:0;
+    display:flex;align-items:center;justify-content:center;
+    background:transparent;border:0;
+    opacity:.35;
+    touch-action:none;
+    transition:opacity .2s ease;
+  }
+  .gear-btn svg{width:28px;height:28px;transition:transform .15s ease;}
+  .gear-btn.holding{opacity:1;}
+  .gear-btn.holding svg{transform:rotate(120deg);transition:transform .8s linear;}
+
+  .gear-hint{
+    position:absolute;top:100%;right:0;margin-top:6px;z-index:6;
+    padding:6px 12px;
+    background:var(--ink);color:#fff;
+    font-size:14px;font-weight:600;white-space:nowrap;
+    border-radius:999px;
+    opacity:0;transform:translateY(-4px);
+    transition:opacity .2s ease,transform .2s ease;
+    pointer-events:none;
+  }
+  .gear-hint.show{opacity:1;transform:translateY(0);}
+
   /* ---------- scene: child | bubbles | child ---------- */
-  /* Everything in here is sized in em, so the one font size of .scene scales
-     the whole dialogue - the script picks the largest size that fits the screen. */
+  /* sized in em: the script sets the one font size of .scene that fits */
   .scene{
     flex:1 1 auto;min-height:0;
     overflow-x:hidden;overflow-y:auto;
@@ -93,8 +118,7 @@
   #personLeft{grid-area:left;}
   #personRight{grid-area:right;}
   .lines{grid-area:lines;}
-  /* auto margins centre things without pushing them off the top when the
-     dialogue is too long and has to scroll */
+  /* auto margins centre without pushing a long dialogue off the top */
   .person,.lines{margin-top:auto;margin-bottom:auto;}
 
   .person{
@@ -103,15 +127,20 @@
     transition:opacity .25s ease,filter .25s ease;
   }
   .sprite{width:6.6em;height:10em;max-width:100%;}
-  .sprite svg,.sprite img{display:block;width:100%;height:100%;object-fit:contain;}
-  .person.talking .sprite{animation:hop .45s ease-in-out infinite alternate;}
+  .sprite > svg,.sprite > img{display:block;width:100%;height:100%;object-fit:contain;}
+  .person.talking .sprite:not(.shop){animation:hop .45s ease-in-out infinite alternate;}
+  .shop .kid{transform-box:fill-box;transform-origin:50% 100%;}
+  .person.talking .shop .kid{animation:hop .45s ease-in-out infinite alternate;}
+  .shop text{font-family:var(--font-display);}
+  .sprite.shop{width:8.6em;height:12.9em;}
+  .person{justify-content:flex-end;}
+  .scene.has-shop .person{height:12.9em;}
   @keyframes hop{
     from{transform:translateY(0) rotate(-1.5deg);}
     to{transform:translateY(-8px) rotate(1.5deg);}
   }
   .scene.busy .person:not(.talking){opacity:.55;filter:saturate(.6);}
 
-  /* mouth of the drawn stand-in children */
   .mouth-open{opacity:0;}
   .person.talking .mouth-shut{opacity:0;}
   .person.talking .mouth-open{
@@ -130,12 +159,10 @@
     list-style:none;padding:0;
     display:flex;flex-direction:column;gap:.6em;
   }
-  /* room on the right for the arrow that points back up */
   .lines.has-arrow{padding-right:1.5em;}
   .lines li{display:flex;}
   .lines li.left{justify-content:flex-start;padding-left:.45em;}
   .lines li.right{justify-content:flex-end;padding-right:.45em;}
-  /* a little extra room before the bonus bubbles */
   .lines li.bonus-start{margin-top:.7em;}
 
   .bubble{
@@ -171,7 +198,6 @@
   }
   .speaker svg{width:.95em;height:.95em;}
 
-  /* bonus bubbles get a star on the inner top corner */
   .star{
     position:absolute;top:-.65em;
     width:1.35em;height:1.35em;
@@ -181,7 +207,6 @@
   .right .star{left:-.5em;}
   .star svg{display:block;width:100%;height:100%;}
 
-  /* the arrow from a bubble back up to an earlier one */
   .arrows{
     position:absolute;left:0;top:0;
     overflow:visible;
@@ -204,7 +229,7 @@
 
   /* ---------- share sheet ---------- */
   .sheet{
-    position:fixed;inset:0;z-index:9000;
+    position:fixed;top:0;right:0;bottom:0;left:0;z-index:9000;
     display:none;align-items:center;justify-content:center;
     background:rgba(46,42,58,.55);
     padding:20px;
@@ -235,10 +260,24 @@
   }
   .empty-note{max-width:320px;margin:10px auto;font-size:17px;opacity:.7;}
 
-  /* upright: the two children stand at the top, the bubbles get the full width */
+  /* ---------- settings sheet ---------- */
+  .pick{
+    display:flex;flex-direction:column;gap:6px;
+    width:min(320px,76vw);margin:16px auto 0;
+    text-align:left;
+  }
+  .pick span{font-size:12px;letter-spacing:1.3px;text-transform:uppercase;opacity:.65;}
+  .pick select{
+    font-family:var(--font-ui);font-size:19px;font-weight:600;
+    color:var(--ink);background:var(--paper);
+    border:3px solid var(--ink);border-radius:12px;
+    padding:10px 12px;
+    appearance:none;-webkit-appearance:none;
+    text-align:center;
+  }
+
   @media (orientation:portrait){
-    /* the empty first and last rows centre the children and bubbles as one
-       group, and shrink away when the dialogue needs all the room */
+    /* the empty first and last rows centre the group, and shrink when needed */
     .scene{
       grid-template-columns:1fr 1fr;
       grid-template-rows:minmax(0,1fr) auto auto minmax(0,1fr);
@@ -247,6 +286,8 @@
     .person{margin:0;}
     .lines{margin:.5em 0 0;}
     .sprite{width:4.3em;height:6.5em;}
+    .sprite.shop{width:5.6em;height:8.4em;}
+    .scene.has-shop .person{height:8.4em;}
   }
 
   @media (max-width:620px){
@@ -268,15 +309,24 @@
       <h1 id="title"></h1>
       <p class="hint">&#128070; Tap a speech bubble and listen!</p>
     </div>
-    <button class="qr-btn" id="shareBtn" aria-label="Show QR code">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#2E2A3A" stroke-width="2" stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/>
-        <rect x="3" y="14" width="7" height="7" rx="1.2"/>
-        <rect x="5.8" y="5.8" width="1.4" height="1.4" fill="#2E2A3A"/><rect x="16.8" y="5.8" width="1.4" height="1.4" fill="#2E2A3A"/>
-        <rect x="5.8" y="16.8" width="1.4" height="1.4" fill="#2E2A3A"/>
-        <path d="M14 14h3v3h-3zM21 14v1M14 21h1M18 21h3v-3" stroke-linecap="round"/>
-      </svg>
-    </button>
+    <div class="tools">
+      <button class="gear-btn" id="gearBtn" aria-label="Settings (hold)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2E2A3A" stroke-width="2" stroke-linejoin="round">
+          <path d="M10.3 2.8h3.4l.5 2.4a7.3 7.3 0 0 1 1.9 1.1l2.3-.8 1.7 2.9-1.8 1.6a7.4 7.4 0 0 1 0 2.2l1.8 1.6-1.7 2.9-2.3-.8a7.3 7.3 0 0 1-1.9 1.1l-.5 2.4h-3.4l-.5-2.4a7.3 7.3 0 0 1-1.9-1.1l-2.3.8-1.7-2.9 1.8-1.6a7.4 7.4 0 0 1 0-2.2L3.9 8.4l1.7-2.9 2.3.8a7.3 7.3 0 0 1 1.9-1.1z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+      <div class="gear-hint" id="gearHint">Hold to open</div>
+      <button class="qr-btn" id="shareBtn" aria-label="Show QR code">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2E2A3A" stroke-width="2" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.2"/>
+          <rect x="5.8" y="5.8" width="1.4" height="1.4" fill="#2E2A3A"/><rect x="16.8" y="5.8" width="1.4" height="1.4" fill="#2E2A3A"/>
+          <rect x="5.8" y="16.8" width="1.4" height="1.4" fill="#2E2A3A"/>
+          <path d="M14 14h3v3h-3zM21 14v1M14 21h1M18 21h3v-3" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
   </header>
 
   <main class="scene" id="scene">
@@ -285,8 +335,17 @@
     <figure class="person" id="personRight"></figure>
   </main>
 
-  <div class="status" id="status">v9</div>
+  <div class="status" id="status">v19</div>
 
+</div>
+
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-inner">
+    <button class="close-btn" id="settingsClose" aria-label="Close">&#10005;</button>
+    <h2>Settings</h2>
+    <label class="pick"><span>Main dialogue</span><select id="pickMain"></select></label>
+    <label class="pick"><span>Bonus dialogue &#9733;</span><select id="pickBonus"></select></label>
+  </div>
 </div>
 
 <div class="sheet" id="shareSheet">
@@ -674,36 +733,52 @@ var QR = (function(){
 
   /* ---------- the dialogue - edit here ---------- */
 
-  /* the heading at the top of the page (also the name of the browser tab) */
-  var TITLE = "Talking to a friend";
+  var TITLE = "Going shopping for school";
 
-  /* The two children - "boy" and "girl" are only used below in LINES to say
-     who speaks. picture: leave it empty to use a drawn stand-in, or give the
-     file name of your own drawing, e.g. "boy.png" (a PNG with a transparent
-     background works best). colour: that child's speech bubbles. */
+  /* "boy" and "girl" are only used in LINES below. picture: empty for a drawn
+     stand-in, or a file name such as "boy.png". shop:true: behind a counter,
+     basket:true: a shopping basket in the hand (drawn stand-in only). */
   var PEOPLE = {
-    boy:  { side:"left",  colour:"#1C9786", picture:"" },
-    girl: { side:"right", colour:"#E8603F", picture:"" }
+    boy:  { side:"left",  colour:"#E8603F", picture:"", basket:true },
+    girl: { side:"right", colour:"#1C9786", picture:"", shop:true }
   };
 
-  /* One entry per speech bubble, top to bottom. clip is the recording's file
-     name without ".mp3" - put it in the audio folder (next to index.html also
-     works). A bubble whose clip is missing is greyed out.
-     A word in [square brackets] is coloured - see WORD_COLOURS below.
-     bonus:true puts a small star on the bubble to mark a bonus task.
-     backTo:5 draws an arrow from the bubble back up to bubble number 5. */
+  /* the key goes into the recordings' file names, [brackets] print bold, price
+     in pounds; which one is used is picked with the gear (hold it) */
+  var ITEMS = {
+    "pencil":      { words:"a [pencil]",      price:1 },
+    "rubber":      { words:"a [rubber]",      price:1 },
+    "pencil-case": { words:"a [pencil case]", price:3 },
+    "glue-stick":  { words:"a [glue stick]",  price:2 },
+    "ruler":       { words:"a [ruler]",       price:1 },
+    "pen":         { words:"a [pen]",         price:2 },
+    "book":        { words:"a [book]",        price:2 },
+    "sharpener":   { words:"a [sharpener]",   price:2 }
+  };
+
+  var START_MAIN  = "pencil";
+  var START_BONUS = "ruler";
+
+  /* {item} and {price} come from ITEMS; bonus:true lines use the bonus pick.
+     "03-{item}" is audio/03-pencil.mp3 - a missing recording greys its bubble.
+     [word] prints bold (coloured if in WORD_COLOURS), bonus:true adds a star,
+     backTo:5 an arrow back to bubble 5. */
   var LINES = [
-    { who:"boy",  text:"1. Good morning!",                                  clip:"01" },
-    { who:"girl", text:"2. Hello, how are you?",                            clip:"02" },
-    { who:"boy",  text:"3. I am [good]/[okay]/[bad]. How are you?",         clip:"03" },
-    { who:"girl", text:"4. I am [good]/[okay]/[bad].",                      clip:"04" },
-    { who:"boy",  text:"5. Okay, goodbye.",                                 clip:"05" },
-    { who:"girl", text:"6. See you later!",                                 clip:"06" },
-    { who:"boy",  text:"(7.) One more thing. What's your favourite colour?",  clip:"07", bonus:true },
-    { who:"girl", text:"(8.) My favourite colour is ...",                     clip:"08", bonus:true, backTo:5 }
+    { who:"boy",  text:"Good morning!",                          clip:"01" },
+    { who:"girl", text:"Hello, how can I help you?",             clip:"02" },
+    { who:"boy",  text:"I want to buy {item}.",                  clip:"03-{item}" },
+    { who:"girl", text:"Okay, no problem. That's {price}.",      clip:"price-{price}" },
+    { who:"boy",  text:"Thank you. Goodbye.",                    clip:"05" },
+    { who:"girl", text:"See you later!",                         clip:"06" },
+    { who:"boy",  text:"One more thing! I want to buy {item}.",  clip:"07-{item}",     bonus:true },
+    { who:"girl", text:"Okay, no problem. That's {price}.",      clip:"price-{price}", bonus:true, backTo:5 }
   ];
 
-  /* colours for the words in [square brackets]; add more words as needed */
+  /* a price in a bubble, e.g. £2 */
+  function priceWords(p){
+    return "[\u00A3" + p + "]";
+  }
+
   var WORD_COLOURS = {
     good:"#3E9A52",
     okay:"#E0A100",
@@ -721,8 +796,6 @@ var QR = (function(){
 
   /* ---------- colours ---------- */
 
-  /* blend a colour towards white (or towards ink) for the lighter and darker
-     shades of a bubble */
   function mix(hex, amount, base){
     base = base || [255,255,255];
     var n = parseInt(hex.replace("#", ""), 16);
@@ -740,14 +813,13 @@ var QR = (function(){
   }
 
   /* ---------- drawn stand-in children ---------- */
-  /* used until real pictures are added */
 
   var LOOKS = {
     girl: { skin:"#F6C9A4", hair:"#8A4B2A", trousers:"#3D5A80", bunches:true  },
     boy:  { skin:"#B97B52", hair:"#2A2230", trousers:"#46406E", bunches:false }
   };
 
-  function drawKid(look, shirt){
+  function drawKid(look, shirt, place, basket){
     var k = LOOKS[look] || LOOKS.girl;
     var back = "", front;
 
@@ -763,7 +835,7 @@ var QR = (function(){
               '<path d="M98 38 Q100 22 114 26" stroke="' + k.hair + '" stroke-width="7" stroke-linecap="round" fill="none"/>';
     }
 
-    return '<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    return '<svg ' + (place || '') + ' viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
       '<ellipse cx="100" cy="292" rx="62" ry="7" fill="rgba(46,42,58,.12)"/>' +
       '<rect x="72" y="226" width="22" height="58" rx="10" fill="' + k.trousers + '"/>' +
       '<rect x="106" y="226" width="22" height="58" rx="10" fill="' + k.trousers + '"/>' +
@@ -789,8 +861,80 @@ var QR = (function(){
         '<ellipse cx="100" cy="121" rx="10" ry="9" fill="#6B2B33"/>' +
         '<ellipse cx="100" cy="126" rx="6" ry="3.5" fill="#FF8A8A"/>' +
       '</g>' +
+      (basket ? drawBasket(k.skin) : '') +
     '</svg>';
   }
+
+  /* a wicker basket with a book, a pencil and a glue stick, held in the right
+     hand - the hand is drawn again on top so it grips the handle */
+  function drawBasket(skin){
+    return '<g transform="rotate(-12 138 243)">' +
+        '<rect x="129" y="230" width="19" height="26" rx="2" fill="#3B77D8"/>' +
+        '<rect x="131" y="233" width="15" height="3" fill="#FFF7E8" opacity=".7"/>' +
+      '</g>' +
+      '<rect x="150" y="212" width="6" height="44" fill="#F2C31C"/>' +
+      '<path d="M150 212 L153 202 L156 212 Z" fill="#F6C9A4"/>' +
+      '<path d="M152 206 L153 202 L154 206 Z" fill="#2E2A3A"/>' +
+      '<g transform="rotate(8 176 244)">' +
+        '<rect x="171" y="234" width="11" height="24" rx="3" fill="#E24A3B"/>' +
+        '<rect x="171" y="229" width="11" height="8" rx="2" fill="#FFF7E8"/>' +
+      '</g>' +
+      '<path d="M128 258 H188 L183 292 H133 Z" fill="#C98B55"/>' +
+      '<path d="M131 270 H185 M133 282 H184" stroke="#A8683A" stroke-width="2.5"/>' +
+      '<path d="M145 260 L147 292 M158 260 V292 M171 260 L169 292" stroke="#A8683A" stroke-width="2.5"/>' +
+      '<rect x="124" y="252" width="68" height="9" rx="4.5" fill="#8A5A3B"/>' +
+      '<path d="M134 256 Q158 204 182 256" fill="none" stroke="#8A5A3B" stroke-width="5" stroke-linecap="round"/>' +
+      '<circle cx="158" cy="230" r="11" fill="' + skin + '"/>';
+  }
+
+  /* ---------- the little school shop ---------- */
+  /* one picture, so awning, child and counter always line up */
+
+  function drawShop(colour, kid){
+    var stripes = "", keys = "", pencils = "";
+    for (var k = 0; k < 8; k++){
+      var x = 6 + k * 31, fill = k % 2 ? "#FFF7E8" : colour;
+      stripes += '<rect x="' + x + '" y="48" width="31" height="44" fill="' + fill + '"/>' +
+                 '<circle cx="' + (x + 15.5) + '" cy="92" r="15.5" fill="' + fill + '"/>';
+    }
+    for (var r = 0; r < 2; r++)
+      for (var c = 0; c < 4; c++)
+        keys += '<rect x="' + (198 + c * 12.5) + '" y="' + (268 + r * 8) + '" width="9" height="5" rx="2" fill="#FFF7E8" opacity=".85"/>';
+    ["#E24A3B","#3B77D8","#4CAF62"].forEach(function(col, n){
+      var px = 27 + n * 8;
+      pencils += '<rect x="' + px + '" y="240" width="6" height="26" fill="' + col + '"/>' +
+                 '<path d="M' + px + ' 240 L' + (px + 3) + ' 231 L' + (px + 6) + ' 240 Z" fill="#F6C9A4"/>' +
+                 '<path d="M' + (px + 2) + ' 234 L' + (px + 3) + ' 231 L' + (px + 4) + ' 234 Z" fill="#2E2A3A"/>';
+    });
+
+    return '<svg viewBox="0 0 260 390" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<rect x="14" y="44" width="10" height="252" rx="4" fill="#B07245"/>' +
+      '<rect x="236" y="44" width="10" height="252" rx="4" fill="#B07245"/>' +
+      stripes +
+      '<rect x="4" y="36" width="252" height="14" rx="7" fill="#8A5A3B"/>' +
+      '<g class="kid">' + kid + '</g>' +
+      pencils +
+      '<rect x="22" y="262" width="30" height="30" rx="5" fill="#F2C31C"/>' +
+      '<rect x="62" y="268" width="46" height="16" rx="3" fill="#3B77D8"/>' +
+      '<rect x="64" y="271" width="42" height="3" fill="#FFF7E8" opacity=".7"/>' +
+      '<rect x="58" y="284" width="74" height="8" rx="2" fill="#F2C31C"/>' +
+      '<path d="M66 284v4M74 284v3M82 284v4M90 284v3M98 284v4M106 284v3M114 284v4M122 284v3" stroke="#8A5A3B" stroke-width="1.5"/>' +
+      '<rect x="203" y="240" width="38" height="22" rx="5" fill="#2E2A3A"/>' +
+      '<rect x="207" y="244" width="30" height="14" rx="3" fill="#8FE3C9"/>' +
+      '<rect x="218" y="260" width="8" height="6" fill="#2E2A3A"/>' +
+      '<rect x="192" y="264" width="60" height="28" rx="6" fill="#46406E"/>' +
+      keys +
+      '<rect x="192" y="285" width="60" height="7" fill="#383260"/>' +
+      '<rect x="0" y="290" width="260" height="16" rx="6" fill="#8A5A3B"/>' +
+      '<rect x="8" y="304" width="244" height="86" fill="#C98B55"/>' +
+      '<rect x="22" y="318" width="102" height="58" rx="7" fill="#B87A46"/>' +
+      '<rect x="136" y="318" width="102" height="58" rx="7" fill="#B87A46"/>' +
+      '<rect x="50" y="332" width="46" height="30" rx="7" fill="#FFF7E8"/>' +
+      '<text x="73" y="354" text-anchor="middle" font-size="21" font-weight="700" fill="#2E2A3A">£</text>' +
+    '</svg>';
+  }
+
+  var IN_SHOP = 'x="40" y="78" width="180" height="270"';
 
   /* ---------- icons ---------- */
 
@@ -814,25 +958,31 @@ var QR = (function(){
     setColours(el, p.colour);
 
     var sprite = document.createElement("div");
-    sprite.className = "sprite";
-    if (p.picture){
+    sprite.className = "sprite" + (p.shop ? " shop" : "");
+    if (p.shop){
+      var src = String(p.picture).replace(/"/g, "");
+      sprite.innerHTML = drawShop(p.colour, p.picture
+        ? '<image href="' + src + '" xlink:href="' + src + '" ' + IN_SHOP + ' preserveAspectRatio="xMidYMax meet"/>'
+        : drawKid(key, p.colour, IN_SHOP));
+    } else if (p.picture){
       var img = document.createElement("img");
       img.src = p.picture;
       img.alt = "";
       img.draggable = false;
       sprite.appendChild(img);
     } else {
-      sprite.innerHTML = drawKid(key, p.colour);
+      sprite.innerHTML = drawKid(key, p.colour, "", p.basket);
     }
 
     el.appendChild(sprite);
     p.el = el;
+    if (p.shop) scene.classList.add("has-shop");
   });
 
   /* ---------- speech bubbles ---------- */
 
-  /* fill a bubble with its text, colouring the words in [square brackets] */
   function fillText(box, text){
+    while (box.firstChild) box.removeChild(box.firstChild);
     var parts = text.split(/\[([^\]]+)\]/);
     for (var k = 0; k < parts.length; k++){
       if (!parts[k]) continue;
@@ -855,17 +1005,40 @@ var QR = (function(){
     var b = document.createElement("button");
     b.className = "bubble";
     b.setAttribute("data-line", i);
-    b.setAttribute("aria-label", (line.bonus ? "Bonus: " : "") + line.text.replace(/[\[\]]/g, ""));
     setColours(b, p.colour);
     b.innerHTML = '<span class="speaker">' + SPEAKER_ICON + '</span><span class="text"></span>' +
                   (line.bonus ? '<span class="star">' + STAR_ICON + '</span>' : '');
-    fillText(b.querySelector(".text"), line.text);
 
     li.appendChild(b);
     linesBox.appendChild(li);
-    line.el  = b;
-    line.src = "./audio/" + line.clip + ".mp3";
+    line.el      = b;
+    line.textBox = b.querySelector(".text");
   });
+
+  var FIRST  = Object.keys(ITEMS)[0];
+  var choice = { main:ITEMS[START_MAIN] ? START_MAIN : FIRST, bonus:ITEMS[START_BONUS] ? START_BONUS : FIRST };
+
+  function itemFor(line){ return line.bonus ? choice.bonus : choice.main; }
+
+  function fillIn(s, key, forFile){
+    var it = ITEMS[key];
+    return s.replace(/\{item\}/g, forFile ? key : it.words)
+            .replace(/\{price\}/g, forFile ? String(it.price) : priceWords(it.price));
+  }
+
+  function showDialogue(){
+    LINES.forEach(function(line){
+      var key  = itemFor(line);
+      var text = fillIn(line.text, key, false);
+      fillText(line.textBox, text);
+      line.el.setAttribute("aria-label", (line.bonus ? "Bonus: " : "") + text.replace(/[\[\]]/g, ""));
+      line.clipNow = fillIn(line.clip, key, true);
+      line.src     = "./audio/" + line.clipNow + ".mp3";
+      line.silent  = false;
+      line.el.classList.remove("silent");
+    });
+    findClips();
+  }
 
   /* ---------- arrows back to an earlier bubble ---------- */
 
@@ -884,17 +1057,15 @@ var QR = (function(){
     arrowLayer.setAttribute("height", 0);
   }
 
-  /* The arrow leaves the top right of its bubble, runs along the free strip on
-     the right of the bubbles and turns into the bubble it points to. Offsets
-     are measured rather than screen positions, so a bubble that grows while it
-     plays does not bend the arrow. */
+  /* offsets, not screen positions: a bubble growing while it plays must not
+     bend the arrow */
   function drawArrows(){
     clearArrows();
     if (!hasArrow) return;
     var em   = parseFloat(getComputedStyle(linesBox).fontSize);
     var w    = linesBox.clientWidth, h = linesBox.clientHeight;
-    var lane = w - 0.75 * em;          /* the middle of the free strip */
-    var r    = 0.5 * em;               /* how round the corners are */
+    var lane = w - 0.75 * em;
+    var r    = 0.5 * em;
     var head = 0.5 * em;
     var out  = "";
 
@@ -924,36 +1095,57 @@ var QR = (function(){
 
   /* ---------- spoken lines ---------- */
 
-  var current = -1;      /* the line playing now, -1 when quiet */
+  var current = -1;
 
   function markSilent(i){
     LINES[i].silent = true;
     LINES[i].el.classList.add("silent");
   }
 
-  /* Each clip is looked for in ./audio/ first and next to index.html second,
-     and settled before any tap, so play() always runs inside the gesture. A
-     plain GET is used so that offline the service worker answers from its
-     cache - a HEAD request would go past it and fail. */
-  function findClip(line, i){
-    var inFolder = "./audio/" + line.clip + ".mp3";
-    var beside   = "./" + line.clip + ".mp3";
+  /* audio/ first, then next to index.html - a GET, as offline only a GET
+     reaches the kept copy */
+  function locate(name, done){
+    var inFolder = "./audio/" + name + ".mp3";
+    var beside   = "./" + name + ".mp3";
     fetch(inFolder)
       .then(function(r){
-        if (r.ok){ line.src = inFolder; return; }
+        if (r.ok){ done(inFolder); return; }
         throw new Error("not in the audio folder");
       })
       .catch(function(){
-        return fetch(beside).then(function(r){
-          if (r.ok) line.src = beside;
-          else markSilent(i);
-        });
+        return fetch(beside).then(function(r){ done(r.ok ? beside : null); });
       })
-      .catch(function(){ markSilent(i); });
+      .catch(function(){ done(null); });
+  }
+
+  /* settled before any tap, so play() always runs inside the gesture */
+  function findClip(line, i){
+    var name = line.clipNow;
+    locate(name, function(url){
+      if (line.clipNow !== name) return;         /* something else was picked meanwhile */
+      if (url) line.src = url;
+      else markSilent(i);
+    });
   }
 
   function findClips(){
-    LINES.forEach(function(line, i){ if (!line.silent) findClip(line, i); });
+    LINES.forEach(function(line, i){ findClip(line, i); });
+  }
+
+  function allClipNames(){
+    var names = {};
+    LINES.forEach(function(line){
+      Object.keys(ITEMS).forEach(function(key){ names[fillIn(line.clip, key, true)] = true; });
+    });
+    return Object.keys(names);
+  }
+
+  /* every recording once, so switching works offline too */
+  function keepAllClips(then){
+    var names = allClipNames(), left = names.length;
+    names.forEach(function(name){
+      locate(name, function(){ if (--left === 0 && then) setTimeout(then, 800); });
+    });
   }
 
   function mark(i){
@@ -990,7 +1182,7 @@ var QR = (function(){
     } catch (e){ clipFailed(i); }
   }
 
-  /* a missing clip can report twice (the error event and play()), once is enough */
+  /* a missing clip reports twice (error event and play()) */
   function clipFailed(i){
     if (LINES[i].silent) return;
     markSilent(i);
@@ -1000,7 +1192,6 @@ var QR = (function(){
   player.addEventListener("ended", stop);
   player.addEventListener("error", function(){ if (current >= 0) clipFailed(current); });
 
-  /* tap a bubble to hear it, tap it again to stop */
   linesBox.addEventListener("click", function(e){
     var b = e.target.closest(".bubble");
     if (!b) return;
@@ -1010,7 +1201,121 @@ var QR = (function(){
     else playLine(i);
   });
 
-  findClips();
+  /* ---------- settings: hold the gear for a second ---------- */
+
+  var gearBtn       = document.getElementById("gearBtn");
+  var settingsSheet = document.getElementById("settingsSheet");
+  var pickMain      = document.getElementById("pickMain");
+  var pickBonus     = document.getElementById("pickBonus");
+  var HOLD_MS       = 800;
+  var STORE         = "dialogue-choice";
+  var holdTimer     = null;
+
+  function itemLabel(key){
+    var it = ITEMS[key];
+    return it.words.replace(/[\[\]]/g, "").replace(/^(a|an) /, "") + " (£" + it.price + ")";
+  }
+
+  function fillPicker(sel){
+    Object.keys(ITEMS).forEach(function(key){
+      var o = document.createElement("option");
+      o.value = key;
+      o.textContent = itemLabel(key);
+      sel.appendChild(o);
+    });
+  }
+  fillPicker(pickMain);
+  fillPicker(pickBonus);
+
+  function saveChoice(){
+    try { localStorage.setItem(STORE, JSON.stringify(choice)); } catch (e){}
+  }
+
+  function takeChoice(c){
+    if (!c) return;
+    if (ITEMS[c.main])  choice.main  = c.main;
+    if (ITEMS[c.bonus]) choice.bonus = c.bonus;
+  }
+
+  function loadChoice(){
+    try { takeChoice(JSON.parse(localStorage.getItem(STORE) || "null")); } catch (e){}
+    /* a scanned code brings the teacher's pick along, e.g. #main=ruler&bonus=pen */
+    var m = location.hash.match(/main=([a-z0-9\-]+)/), b = location.hash.match(/bonus=([a-z0-9\-]+)/);
+    if (m || b){
+      takeChoice({ main:m && m[1], bonus:b && b[1] });
+      saveChoice();
+      try { if (history.replaceState) history.replaceState(null, "", location.pathname); } catch (e){}
+    }
+  }
+
+  function openSettings(){
+    stop();
+    pickMain.value  = choice.main;
+    pickBonus.value = choice.bonus;
+    settingsSheet.classList.add("open");
+  }
+
+  function picked(){
+    choice.main  = pickMain.value;
+    choice.bonus = pickBonus.value;
+    saveChoice();
+    stop();
+    showDialogue();
+    fit();
+  }
+  pickMain.addEventListener("change", picked);
+  pickBonus.addEventListener("change", picked);
+
+  /* hold to open, so the children do not open it by accident */
+  var gearHint  = document.getElementById("gearHint");
+  var holdFrom  = null, hintTimer = null;
+
+  function holdEnd(){
+    if (holdTimer){ clearTimeout(holdTimer); holdTimer = null; }
+    holdFrom = null;
+    gearBtn.classList.remove("holding");
+  }
+
+  function showHint(){
+    gearHint.classList.add("show");
+    if (hintTimer) clearTimeout(hintTimer);
+    hintTimer = setTimeout(function(){ gearHint.classList.remove("show"); }, 1600);
+  }
+
+  gearBtn.addEventListener("pointerdown", function(e){
+    e.preventDefault();
+    if (holdTimer) return;
+    try { gearBtn.setPointerCapture(e.pointerId); } catch (err){}
+    holdFrom = { x:e.clientX, y:e.clientY };
+    gearBtn.classList.add("holding");
+    holdTimer = setTimeout(function(){
+      holdTimer = null;
+      holdEnd();
+      gearHint.classList.remove("show");
+      openSettings();
+    }, HOLD_MS);
+  });
+  gearBtn.addEventListener("pointermove", function(e){
+    if (holdFrom && Math.abs(e.clientX - holdFrom.x) + Math.abs(e.clientY - holdFrom.y) > 40) holdEnd();
+  });
+  gearBtn.addEventListener("pointerup", function(){
+    if (holdTimer){ holdEnd(); showHint(); }
+  });
+  gearBtn.addEventListener("pointercancel", holdEnd);
+  gearBtn.addEventListener("keydown", function(e){
+    if (e.key === "Enter" || e.key === " "){ e.preventDefault(); openSettings(); }
+  });
+
+  /* only the cross closes it - lifting the finger after the hold lands on the
+     dark background */
+  document.getElementById("settingsClose").addEventListener("click", function(){
+    settingsSheet.classList.remove("open");
+  });
+
+  /* ---------- start ---------- */
+
+  loadChoice();
+  showDialogue();
 
   /* ---------- share sheet ---------- */
 
@@ -1020,7 +1325,7 @@ var QR = (function(){
 
   function pageUrl(){
     var web = location.protocol === "https:" || location.protocol === "http:";
-    return web ? location.origin + location.pathname : "";
+    return web ? location.origin + location.pathname + "#main=" + choice.main + "&bonus=" + choice.bonus : "";
   }
 
   function qrSvg(text){
@@ -1069,16 +1374,14 @@ var QR = (function(){
 
   /* ---------- fit the screen, also after turning the iPad ---------- */
 
-  var MIN_SIZE = 16, MAX_SIZE = 44;      /* text size in the bubbles, in px */
+  var MIN_SIZE = 16, MAX_SIZE = 44;      /* bubble text, px */
 
-  /* the dialogue fits when nothing sticks out below or to the side */
   function fits(){
     return scene.scrollHeight <= scene.clientHeight &&
            scene.scrollWidth  <= scene.clientWidth;
   }
 
-  /* Sizes are tried from both ends, halving the gap each time, and the largest
-     that fits is kept. A very long dialogue gets MIN_SIZE and can be scrolled. */
+  /* halve the gap until the largest size that fits is left */
   function fit(){
     var lo = MIN_SIZE, hi = MAX_SIZE;
     clearArrows();                     /* an old arrow must not get in the way */
@@ -1111,12 +1414,30 @@ var QR = (function(){
 
   /* ---------- offline storage ---------- */
 
-  var VERSION = "v9";
+  var VERSION = "v19";
   var statusEl = document.getElementById("status");
+  var keptText = "";
 
   function showStatus(){
     var saved = ("serviceWorker" in navigator) && navigator.serviceWorker.controller;
-    statusEl.textContent = VERSION + (saved ? " · saved on this iPad" : "");
+    statusEl.textContent = VERSION + (saved ? " \u00B7 saved on this iPad" + keptText : "");
+  }
+
+  /* shown in the corner: ready for a lesson without internet? */
+  function countKept(){
+    if (!window.caches) return;
+    var names = allClipNames(), found = 0, left = names.length;
+    names.forEach(function(name){
+      caches.match("./audio/" + name + ".mp3")
+        .then(function(r){ return r || caches.match("./" + name + ".mp3"); })
+        .then(function(r){ if (r) found++; })
+        .catch(function(){})
+        .then(function(){
+          if (--left > 0) return;
+          keptText = " \u00B7 " + found + " of " + names.length + " recordings";
+          showStatus();
+        });
+    });
   }
 
   if ("serviceWorker" in navigator){
@@ -1124,12 +1445,13 @@ var QR = (function(){
       navigator.serviceWorker.register("./sw.js", { scope:"./" })
         .then(showStatus)
         .catch(function(){ statusEl.textContent = VERSION; });
+          if (navigator.serviceWorker.controller) setTimeout(function(){ keepAllClips(countKept); }, 1500);
     });
-    /* On the very first visit the clips and pictures load before the offline
-       copy exists, so once it takes over they are fetched again to be kept. */
+    /* on the first visit everything loads before the offline copy exists */
     navigator.serviceWorker.addEventListener("controllerchange", function(){
       showStatus();
       findClips();
+      keepAllClips(countKept);
       Object.keys(PEOPLE).forEach(function(key){
         if (PEOPLE[key].picture) fetch(PEOPLE[key].picture).catch(function(){});
       });
